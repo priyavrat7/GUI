@@ -173,7 +173,7 @@ Main
 
 ---
 
-## Lessons Learned
+## Skills Learned
 
 ### 1. JavaFX Module System
 - Requires explicit module path configuration

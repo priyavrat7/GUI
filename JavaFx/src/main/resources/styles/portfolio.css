@@ -10,17 +10,17 @@
     -fx-border-width: 1px;
 }
 
+
+/* iOS-like neutral header */
 .table-view .column-header {
-    -fx-background-color: mcgill-red;
-    -fx-text-fill: mcgill-white;
+    -fx-background-color: mcgill-gray-100;
+    -fx-text-fill: mcgill-black;
     -fx-font-weight: bold;
     -fx-font-size: 11pt;
     -fx-padding: 12px;
 }
 
-.table-view .column-header-background {
-    -fx-background-color: mcgill-red;
-}
+.table-view .column-header-background { -fx-background-color: mcgill-gray-100; }
 
 .table-view .table-row-cell {
     -fx-background-color: mcgill-white;
@@ -31,18 +31,17 @@
 }
 
 .table-view .table-row-cell:selected {
-    -fx-background-color: mcgill-red-light;
-    -fx-text-background-color: mcgill-red;
+    -fx-background-color: rgba(10,132,255,0.12); /* primary tint */
+    -fx-text-background-color: mcgill-black;
     -fx-font-weight: bold;
 }
 
-.table-view .table-row-cell:hover {
-    -fx-background-color: #FFE8E8;
-}
+.table-view .table-row-cell:hover { -fx-background-color: mcgill-gray-50; }
 
 /* Table cell alignment */
 .table-view .table-cell {
     -fx-alignment: CENTER-LEFT;
+    -fx-padding: 8 12 8 12;
 }
 
 .table-view .table-column {
@@ -55,23 +54,17 @@
 }
 
 /* Green text for positive P/L */
-.table-view .positive-pl .text {
-    -fx-fill: #2E7D32;
-    -fx-font-weight: bold;
-}
+.table-view .positive-pl .text { -fx-fill: mcgill-success; -fx-font-weight: bold; }
 
 /* Red text for negative P/L */
-.table-view .negative-pl .text {
-    -fx-fill: #D32F2F;
-    -fx-font-weight: bold;
-}
+.table-view .negative-pl .text { -fx-fill: mcgill-danger; -fx-font-weight: bold; }
 
 /* ========================================
    Portfolio Form Styling
    ======================================== */
 /* Form container with light gray background */
 .form-container {
-    -fx-background-color: #F9F9F9;
+    -fx-background-color: mcgill-gray-100;
     -fx-background-radius: 10;
     -fx-padding: 20;
 }

@@ -69,7 +69,7 @@ public class Main extends Application {
      */
     private void createLoginScene() {
         // Title
-        Label title = new Label("McGill Stock Market Platform");
+        Label title = new Label("Portfolio");
         title.getStyleClass().add("mcgill-title");
         
         Label subtitle = new Label("Portfolio Management System");
@@ -161,7 +161,7 @@ public class Main extends Application {
         Label title = new Label("McGill Stock Market Platform");
         title.getStyleClass().add("mcgill-title");
         
-        Label subtitle = new Label("Track Your Portfolio Performance");
+        Label subtitle = new Label("Holdings & Analytics");
         subtitle.getStyleClass().add("mcgill-subtitle");
         
         Button Section1Btn = new Button("Portfolio Management");

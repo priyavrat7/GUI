@@ -144,6 +144,10 @@ public class StockService {
         portfolio.clear();
         portfolio.addAll(repository.findAll());
     }
+
+    public void persist(Stock stock) {
+        repository.update(stock);
+    }
     
     /**
      * Calculate total portfolio value (shares × current price)

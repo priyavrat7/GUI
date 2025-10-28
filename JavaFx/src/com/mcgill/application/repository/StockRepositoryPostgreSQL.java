@@ -122,7 +122,7 @@ public class StockRepositoryPostgreSQL {
      */
     public void update(Stock stock) {
         String sql = "UPDATE portfolio SET symbol = ?, company = ?, shares = ?, " +
-                "purchase_price = ?, current_price = ?, sector = ? WHERE id = ?";
+                "purchase_price = ?, current_price = ?, sector = ?, last_refreshed = ? WHERE id = ?";
 
         try (Connection conn = dbConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -133,7 +133,12 @@ public class StockRepositoryPostgreSQL {
             pstmt.setDouble(4, stock.getPurchasePrice());
             pstmt.setDouble(5, stock.getCurrentPrice());
             pstmt.setString(6, stock.getSector());
-            pstmt.setInt(7, stock.getId());
+            if (stock.getLastRefreshed() != null) {
+                pstmt.setTimestamp(7, java.sql.Timestamp.valueOf(stock.getLastRefreshed()));
+            } else {
+                pstmt.setTimestamp(7, null);
+            }
+            pstmt.setInt(8, stock.getId());
 
             pstmt.executeUpdate();
             System.out.println("✓ Stock updated: " + stock.getSymbol());
@@ -176,6 +181,8 @@ public class StockRepositoryPostgreSQL {
         stock.setPurchasePrice(rs.getDouble("purchase_price"));
         stock.setCurrentPrice(rs.getDouble("current_price"));
         stock.setSector(rs.getString("sector"));
+        java.sql.Timestamp ts = rs.getTimestamp("last_refreshed");
+        if (ts != null) stock.setLastRefreshed(ts.toLocalDateTime());
         return stock;
     }
 }

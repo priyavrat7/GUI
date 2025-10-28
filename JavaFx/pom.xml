@@ -44,6 +44,12 @@
             <artifactId>postgresql</artifactId>
             <version>42.7.1</version>
         </dependency>
+        <!-- Add this dependency (around line 46, after PostgreSQL dependency) -->
+        <dependency>
+            <groupId>com.google.code.gson</groupId>
+            <artifactId>gson</artifactId>
+            <version>2.10.1</version>
+        </dependency>
     </dependencies>
 
     <build>

@@ -1,6 +1,12 @@
 package com.mcgill.application.model;
 
 import javafx.beans.property.*;
+import java.time.LocalDateTime;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import java.time.format.DateTimeFormatter;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 
 /**
  * Stock Model Class with JavaFX Properties
@@ -17,6 +23,7 @@ public class Stock {
     private final DoubleProperty purchasePrice = new SimpleDoubleProperty();
     private final DoubleProperty currentPrice = new SimpleDoubleProperty();
     private final StringProperty sector = new SimpleStringProperty();
+    private final ObjectProperty<LocalDateTime> lastRefreshed = new SimpleObjectProperty<>();
     
     public Stock() {
         // Default constructor
@@ -121,6 +128,26 @@ public class Stock {
     
     public StringProperty sectorProperty() {
         return sector;
+    }
+    
+    // ========== Last Refreshed Timestamp ==========
+    public LocalDateTime getLastRefreshed() {
+        return lastRefreshed.get();
+    }
+    
+    public void setLastRefreshed(LocalDateTime value) {
+        lastRefreshed.set(value);
+    }
+    
+    public ObjectProperty<LocalDateTime> lastRefreshedProperty() {
+        return lastRefreshed;
+    }
+    
+    public String getLastRefreshedFormatted() {
+        LocalDateTime ts = getLastRefreshed();
+        if (ts == null) return "-";
+        ZoneId ny = ZoneId.of("America/New_York");
+        return ts.atZone(ny).format(DateTimeFormatter.ofPattern("dd/MM/yy HH/mm/ss"));
     }
     
     // ========== Calculated Properties ==========

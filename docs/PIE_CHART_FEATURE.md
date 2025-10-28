@@ -90,3 +90,7 @@ Portfolio Investment Distribution
 **Module Required:** `javafx.charts`  
 **Integration:** Fully integrated with portfolio
 
+## 🔎 Where in Code
+- Controller method: `PortfolioController.showPortfolioChart()`
+
+
