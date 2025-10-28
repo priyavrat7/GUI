@@ -1,0 +1,621 @@
+package com.mcgill.application.controller;
+
+import com.mcgill.application.model.Stock;
+import com.mcgill.application.service.StockService;
+import javafx.geometry.Insets;
+import javafx.geometry.Pos;
+import javafx.scene.Scene;
+import javafx.scene.chart.PieChart;
+import javafx.scene.control.*;
+import javafx.scene.control.ScrollPane;
+import javafx.scene.layout.*;
+import javafx.stage.Stage;
+
+/**
+ * PortfolioController - Handles Stock Portfolio Management UI and Events
+ * MVC Controller Layer - Delegates business logic to StockService
+ */
+public class PortfolioController {
+    
+    private Scene scene;
+    private TableView<Stock> table;
+    private StockService stockService;
+    
+    // UI Components
+    private TextField idField;
+    private TextField symbolField;
+    private TextField companyField;
+    private TextField sharesField;
+    private TextField purchasePriceField;
+    private TextField currentPriceField;
+    private TextField sectorField;
+    
+    // Statistics labels
+    private Label totalInvestmentLabel;
+    private Label currentValueLabel;
+    private Label profitLossLabel;
+    
+    // Callback for navigation
+    private Runnable onBackCallback;
+    
+    public PortfolioController(Runnable onBackCallback) {
+        this.onBackCallback = onBackCallback;
+        stockService = new StockService();
+        createScene();
+    }
+    
+    public Scene getScene() {
+        return scene;
+    }
+    
+    private void createScene() {
+        // Title
+        Label title = new Label("McGill Stock Market Portfolio");
+        title.getStyleClass().add("mcgill-section-title");
+        
+        // Portfolio Statistics
+        HBox statsBox = new HBox(30);
+        statsBox.setAlignment(Pos.CENTER);
+        statsBox.setPadding(new Insets(15, 20, 15, 20));
+        statsBox.setStyle("-fx-background-color: #F0F0F0; -fx-background-radius: 10;");
+        
+        Label totalInvestmentLabel = new Label();
+        totalInvestmentLabel.setId("totalInvestment");
+        Label currentValueLabel = new Label();
+        currentValueLabel.setId("currentValue");
+        Label profitLossLabel = new Label();
+        profitLossLabel.setId("profitLoss");
+        
+        // View Graph Button
+        Button viewGraphBtn = new Button("📊 View Graph");
+        viewGraphBtn.getStyleClass().add("mcgill-button-secondary");
+        viewGraphBtn.setPrefHeight(35);
+        viewGraphBtn.setOnAction(e -> showPortfolioChart());
+        
+        statsBox.getChildren().addAll(totalInvestmentLabel, currentValueLabel, profitLossLabel, viewGraphBtn);
+        
+        // Store labels as instance variables for updates
+        this.totalInvestmentLabel = totalInvestmentLabel;
+        this.currentValueLabel = currentValueLabel;
+        this.profitLossLabel = profitLossLabel;
+        
+        updatePortfolioStats();
+        
+        // Create table
+        table = new TableView<>();
+        
+        // Table Columns for Stock Portfolio
+        TableColumn<Stock, Number> idCol = new TableColumn<>("ID");
+        idCol.setCellValueFactory(cellData -> cellData.getValue().idProperty());
+        idCol.setPrefWidth(60);
+        
+        TableColumn<Stock, String> symbolCol = new TableColumn<>("Symbol");
+        symbolCol.setCellValueFactory(cellData -> cellData.getValue().symbolProperty());
+        symbolCol.setPrefWidth(80);
+        
+        TableColumn<Stock, String> companyCol = new TableColumn<>("Company");
+        companyCol.setCellValueFactory(cellData -> cellData.getValue().companyProperty());
+        companyCol.setPrefWidth(200);
+        
+        TableColumn<Stock, Number> sharesCol = new TableColumn<>("Shares");
+        sharesCol.setCellValueFactory(cellData -> cellData.getValue().sharesProperty());
+        sharesCol.setPrefWidth(80);
+        
+        TableColumn<Stock, Number> purchaseCol = new TableColumn<>("Purchase Price");
+        purchaseCol.setCellValueFactory(cellData -> cellData.getValue().purchasePriceProperty());
+        purchaseCol.setPrefWidth(120);
+        
+        TableColumn<Stock, Number> currentCol = new TableColumn<>("Current Price");
+        currentCol.setCellValueFactory(cellData -> cellData.getValue().currentPriceProperty());
+        currentCol.setPrefWidth(120);
+        
+        // Calculated Value Column
+        TableColumn<Stock, String> valueCol = new TableColumn<>("Total Value");
+        valueCol.setCellValueFactory(cellData -> {
+            Stock stock = cellData.getValue();
+            double value = stock.getTotalValue();
+            return new javafx.beans.property.SimpleStringProperty(String.format("$%.2f", value));
+        });
+        valueCol.setPrefWidth(120);
+        
+        // Calculated Profit/Loss Column
+        TableColumn<Stock, String> plCol = new TableColumn<>("P/L");
+        plCol.setCellValueFactory(cellData -> {
+            Stock stock = cellData.getValue();
+            return new javafx.beans.property.SimpleStringProperty(stock.getProfitLossFormatted());
+        });
+        plCol.setPrefWidth(100);
+        
+        // Calculated P/L % Column
+        TableColumn<Stock, String> plPercentCol = new TableColumn<>("P/L %");
+        plPercentCol.setCellValueFactory(cellData -> {
+            Stock stock = cellData.getValue();
+            return new javafx.beans.property.SimpleStringProperty(stock.getProfitLossPercentFormatted());
+        });
+        plPercentCol.setPrefWidth(90);
+        
+        TableColumn<Stock, String> sectorCol = new TableColumn<>("Sector");
+        sectorCol.setCellValueFactory(cellData -> cellData.getValue().sectorProperty());
+        sectorCol.setPrefWidth(120);
+        
+        table.getColumns().addAll(idCol, symbolCol, companyCol, sharesCol, purchaseCol, currentCol, valueCol, plCol, plPercentCol, sectorCol);
+        table.setItems(stockService.getAllStocks());
+        
+        // Add selection listener to auto-populate form
+        table.getSelectionModel().selectedItemProperty().addListener((obs, oldSelection, newSelection) -> {
+            if (newSelection != null) {
+                // Populate form with selected stock data
+                idField.setText(String.valueOf(newSelection.getId()));
+                symbolField.setText(newSelection.getSymbol());
+                companyField.setText(newSelection.getCompany());
+                sharesField.setText(String.valueOf(newSelection.getShares()));
+                purchasePriceField.setText(String.valueOf(newSelection.getPurchasePrice()));
+                currentPriceField.setText(String.valueOf(newSelection.getCurrentPrice()));
+                sectorField.setText(newSelection.getSector());
+            }
+        });
+        
+        // Input form - Organized in 3 columns for better layout
+        Label formTitle = new Label("Add Stock to Portfolio");
+        formTitle.getStyleClass().add("mcgill-subtitle");
+        formTitle.setStyle("-fx-font-weight: bold; -fx-font-size: 14pt;");
+        
+        // Left Column with bold labels
+        Label idLabel = new Label("Stock ID:");
+        idLabel.setMinWidth(100);
+        idLabel.setMaxWidth(100);
+        idLabel.setStyle("-fx-font-weight: bold;");
+        idField = new TextField();
+        idField.setPromptText("Enter Stock ID");
+        
+        Label symbolLabel = new Label("Symbol:");
+        symbolLabel.setMinWidth(100);
+        symbolLabel.setMaxWidth(100);
+        symbolLabel.setStyle("-fx-font-weight: bold;");
+        symbolField = new TextField();
+        symbolField.setPromptText("e.g., AAPL");
+        
+        Label companyLabel = new Label("Company:");
+        companyLabel.setMinWidth(100);
+        companyLabel.setMaxWidth(100);
+        companyLabel.setStyle("-fx-font-weight: bold;");
+        companyField = new TextField();
+        companyField.setPromptText("e.g., Apple Inc.");
+        
+        Label sharesLabel = new Label("Shares:");
+        sharesLabel.setMinWidth(100);
+        sharesLabel.setMaxWidth(100);
+        sharesLabel.setStyle("-fx-font-weight: bold;");
+        sharesField = new TextField();
+        sharesField.setPromptText("e.g., 100");
+        
+        // Right Column with bold labels
+        Label purchasePriceLabel = new Label("Purchase Price:");
+        purchasePriceLabel.setMinWidth(100);
+        purchasePriceLabel.setMaxWidth(100);
+        purchasePriceLabel.setStyle("-fx-font-weight: bold;");
+        purchasePriceField = new TextField();
+        purchasePriceField.setPromptText("e.g., 150.00");
+        
+        Label currentPriceLabel = new Label("Current Price:");
+        currentPriceLabel.setMinWidth(100);
+        currentPriceLabel.setMaxWidth(100);
+        currentPriceLabel.setStyle("-fx-font-weight: bold;");
+        currentPriceField = new TextField();
+        currentPriceField.setPromptText("e.g., 175.50");
+        
+        Label sectorLabel = new Label("Sector:");
+        sectorLabel.setMinWidth(100);
+        sectorLabel.setMaxWidth(100);
+        sectorLabel.setStyle("-fx-font-weight: bold;");
+        sectorField = new TextField();
+        sectorField.setPromptText("e.g., Technology");
+        
+        // Use GridPane for proper label-field alignment
+        GridPane formGrid = new GridPane();
+        formGrid.setHgap(15);
+        formGrid.setVgap(10);
+        formGrid.setAlignment(Pos.CENTER);
+        
+        // Left column (0)
+        formGrid.add(idLabel, 0, 0);
+        formGrid.add(idField, 1, 0);
+        formGrid.add(symbolLabel, 0, 1);
+        formGrid.add(symbolField, 1, 1);
+        formGrid.add(companyLabel, 0, 2);
+        formGrid.add(companyField, 1, 2);
+        formGrid.add(sharesLabel, 0, 3);
+        formGrid.add(sharesField, 1, 3);
+        
+        // Right column (2)
+        formGrid.add(purchasePriceLabel, 2, 0);
+        formGrid.add(purchasePriceField, 3, 0);
+        formGrid.add(currentPriceLabel, 2, 1);
+        formGrid.add(currentPriceField, 3, 1);
+        formGrid.add(sectorLabel, 2, 2);
+        formGrid.add(sectorField, 3, 2);
+        
+        // Set field widths
+        idField.setPrefWidth(180);
+        symbolField.setPrefWidth(180);
+        companyField.setPrefWidth(180);
+        sharesField.setPrefWidth(180);
+        purchasePriceField.setPrefWidth(180);
+        currentPriceField.setPrefWidth(180);
+        sectorField.setPrefWidth(180);
+        
+        HBox formBox = new HBox(20);
+        formBox.setAlignment(Pos.CENTER);
+        formBox.setPadding(new Insets(15, 0, 0, 0));
+        formBox.getChildren().add(formGrid);
+        
+        // Container for form with background
+        VBox formContainer = new VBox(15);
+        formContainer.setAlignment(Pos.CENTER);
+        formContainer.setPadding(new Insets(20));
+        formContainer.setStyle("-fx-background-color: #F9F9F9; -fx-background-radius: 10;");
+        formContainer.getChildren().addAll(formTitle, formBox);
+        
+        // Make formBox centered within container
+        formBox.setAlignment(Pos.CENTER);
+        
+        // Buttons
+        HBox buttonBox = new HBox(15);
+        buttonBox.setAlignment(Pos.CENTER);
+        
+        Button addBtn = new Button("Add Stock");
+        addBtn.getStyleClass().add("mcgill-button");
+        addBtn.setOnAction(e -> handleAddStock());
+        
+        Button updateBtn = new Button("Update Stock");
+        updateBtn.getStyleClass().add("mcgill-button-secondary");
+        updateBtn.setOnAction(e -> handleUpdateStock());
+        
+        Button sellBtn = new Button("Sell Shares");
+        sellBtn.getStyleClass().add("mcgill-button-delete");
+        sellBtn.setOnAction(e -> handleSellShares());
+        
+        buttonBox.getChildren().addAll(addBtn, updateBtn, sellBtn);
+        
+        // Layout with better organization
+        VBox container = new VBox(20);
+        container.setPadding(new Insets(20));
+        
+        // Top section: Title and buttons
+        HBox topBox = new HBox(20);
+        topBox.setAlignment(Pos.CENTER);
+        
+        Button backBtnTop = new Button("← Back");
+        backBtnTop.getStyleClass().add("mcgill-button-back");
+        backBtnTop.setOnAction(e -> {
+            if (onBackCallback != null) {
+                onBackCallback.run();
+            }
+        });
+        
+        topBox.getChildren().addAll(backBtnTop);
+        
+        // Add all sections to container
+        container.getChildren().addAll(topBox, title, statsBox, table);
+        
+        // Make table grow to fill available space
+        VBox.setVgrow(table, Priority.ALWAYS);
+        table.setMinHeight(300); // Minimum height
+        table.setPrefHeight(450); // Preferred height (will grow with window)
+        
+        // Add form container
+        container.getChildren().add(formContainer);
+        
+        // Add buttons at bottom
+        container.getChildren().add(buttonBox);
+        
+        // Wrap in ScrollPane to allow scrolling when content is too tall
+        ScrollPane scrollPane = new ScrollPane();
+        scrollPane.setContent(container);
+        scrollPane.setFitToWidth(true);
+        scrollPane.setFitToHeight(true);
+        scrollPane.setHbarPolicy(ScrollPane.ScrollBarPolicy.NEVER);
+        scrollPane.setVbarPolicy(ScrollPane.ScrollBarPolicy.AS_NEEDED);
+        
+        scene = new Scene(scrollPane);
+        scene.getStylesheets().addAll(
+            getClass().getResource("/styles/theme.css").toExternalForm(),
+            getClass().getResource("/styles/portfolio.css").toExternalForm(),
+            getClass().getResource("/styles/common.css").toExternalForm()
+        );
+    }
+    
+    /**
+     * Handle Add Stock event
+     * Controllers delegate to services for business logic
+     */
+    private void handleAddStock() {
+        String idStr = idField.getText().trim();
+        String symbol = symbolField.getText().trim().toUpperCase();
+        String company = companyField.getText().trim();
+        String sharesStr = sharesField.getText().trim();
+        String purchasePriceStr = purchasePriceField.getText().trim();
+        String currentPriceStr = currentPriceField.getText().trim();
+        String sector = sectorField.getText().trim();
+        
+        // Validate input
+        if (idStr.isEmpty() || symbol.isEmpty() || company.isEmpty() || 
+            sharesStr.isEmpty() || purchasePriceStr.isEmpty() || currentPriceStr.isEmpty()) {
+            showError("All fields are required!");
+            return;
+        }
+        
+        // Set default sector if empty
+        if (sector.isEmpty()) {
+            sector = "Unknown";
+        }
+        
+        try {
+            int id = Integer.parseInt(idStr);
+            int shares = Integer.parseInt(sharesStr);
+            double purchasePrice = Double.parseDouble(purchasePriceStr);
+            double currentPrice = Double.parseDouble(currentPriceStr);
+            
+            Stock stock = new Stock(id, symbol, company, shares, purchasePrice, currentPrice, sector);
+            
+            // Delegate to service for business logic
+            String errorMessage = stockService.addStock(stock);
+            
+            if (errorMessage != null) {
+                showError(errorMessage);
+            } else {
+                // Success - update stats and clear fields
+                updatePortfolioStats();
+                idField.clear();
+                symbolField.clear();
+                companyField.clear();
+                sharesField.clear();
+                purchasePriceField.clear();
+                currentPriceField.clear();
+                sectorField.clear();
+            }
+        } catch (NumberFormatException ex) {
+            showError("Please enter valid numbers for numeric fields!");
+        }
+    }
+    
+    /**
+     * Handle Update Stock event
+     * Updates shares and purchase price of selected stock
+     */
+    private void handleUpdateStock() {
+        Stock selected = table.getSelectionModel().getSelectedItem();
+        
+        if (selected == null) {
+            showError("Please select a stock to update!");
+            return;
+        }
+        
+        String sharesStr = sharesField.getText().trim();
+        String purchasePriceStr = purchasePriceField.getText().trim();
+        
+        // Validate input
+        if (sharesStr.isEmpty() || purchasePriceStr.isEmpty()) {
+            showError("Please enter new shares and purchase price!");
+            return;
+        }
+        
+        try {
+            int newShares = Integer.parseInt(sharesStr);
+            double newPurchasePrice = Double.parseDouble(purchasePriceStr);
+            
+            if (newShares <= 0) {
+                showError("Shares must be greater than zero!");
+                return;
+            }
+            
+            if (newPurchasePrice <= 0) {
+                showError("Purchase price must be greater than zero!");
+                return;
+            }
+            
+            // Update the stock
+            selected.setShares(newShares);
+            selected.setPurchasePrice(newPurchasePrice);
+            
+            // Trigger table refresh to update calculated values
+            int selectedIndex = table.getSelectionModel().getSelectedIndex();
+            table.refresh();
+            
+            // Show success
+            showSuccess("Stock updated successfully!");
+            
+            // Update portfolio statistics
+            updatePortfolioStats();
+            
+            // Clear fields
+            idField.clear();
+            symbolField.clear();
+            companyField.clear();
+            sharesField.clear();
+            purchasePriceField.clear();
+            currentPriceField.clear();
+            sectorField.clear();
+            
+        } catch (NumberFormatException ex) {
+            showError("Please enter valid numbers for shares and purchase price!");
+        }
+    }
+    
+    /**
+     * Handle Sell Shares event
+     * Allows selling partial shares or all shares
+     */
+    private void handleSellShares() {
+        Stock selected = table.getSelectionModel().getSelectedItem();
+        
+        if (selected == null) {
+            showError("Please select a stock to sell!");
+            return;
+        }
+        
+        // Show dialog to input number of shares to sell
+        TextInputDialog dialog = new TextInputDialog("1");
+        dialog.setTitle("Sell Shares");
+        dialog.setHeaderText("How many shares to sell?");
+        dialog.setContentText(String.format("You own %d shares of %s.\n\nEnter number of shares to sell:", 
+            selected.getShares(), selected.getSymbol()));
+        
+        dialog.showAndWait().ifPresent(sharesStr -> {
+            try {
+                int sharesToSell = Integer.parseInt(sharesStr.trim());
+                int currentShares = selected.getShares();
+                
+                if (sharesToSell <= 0) {
+                    showError("Shares to sell must be greater than zero!");
+                    return;
+                }
+                
+                if (sharesToSell > currentShares) {
+                    showError(String.format("Cannot sell more than you own! You have %d shares.", currentShares));
+                    return;
+                }
+                
+                // Delegate to service
+                String errorMessage = stockService.sellShares(selected, sharesToSell);
+                
+                if (errorMessage != null) {
+                    showError(errorMessage);
+                } else {
+                    // Trigger table refresh to update calculated values (Total Value, P/L)
+                    int selectedIndex = table.getSelectionModel().getSelectedIndex();
+                    table.refresh();
+                    if (selectedIndex >= 0 && selectedIndex < table.getItems().size()) {
+                        table.getSelectionModel().clearSelection();
+                    }
+                    
+                    // Success message
+                    if (sharesToSell == currentShares) {
+                        showSuccess(String.format("Sold all %d shares of %s", sharesToSell, selected.getSymbol()));
+                    } else {
+                        int remaining = currentShares - sharesToSell;
+                        showSuccess(String.format("Sold %d shares of %s. %d shares remaining.", 
+                            sharesToSell, selected.getSymbol(), remaining));
+                    }
+                    
+                    // Update portfolio-level statistics
+                    updatePortfolioStats();
+                    
+                    // Clear form
+                    idField.clear();
+                    symbolField.clear();
+                    companyField.clear();
+                    sharesField.clear();
+                    purchasePriceField.clear();
+                    currentPriceField.clear();
+                    sectorField.clear();
+                }
+            } catch (NumberFormatException ex) {
+                showError("Please enter a valid number of shares!");
+            }
+        });
+    }
+    
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("Error");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+    
+    private void showSuccess(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("Success");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+    
+    /**
+     * Update portfolio statistics labels
+     */
+    private void updatePortfolioStats() {
+        if (totalInvestmentLabel == null || currentValueLabel == null || profitLossLabel == null) {
+            return;
+        }
+        
+        double investment = stockService.getTotalInvestment();
+        double current = stockService.getTotalPortfolioValue();
+        double pl = stockService.getTotalProfitLoss();
+        double plPercent = stockService.getTotalProfitLossPercent();
+        
+        totalInvestmentLabel.setText(String.format("Total Investment: $%,.2f", investment));
+        totalInvestmentLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13pt; -fx-text-fill: #333333;");
+        
+        currentValueLabel.setText(String.format("Current Value: $%,.2f", current));
+        currentValueLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13pt; -fx-text-fill: #2196F3;");
+        
+        String plColor = pl >= 0 ? "#2E7D32" : "#D32F2F";
+        profitLossLabel.setText(String.format("P/L: %s$%,.2f (%s%.2f%%)", 
+            pl >= 0 ? "+" : "", pl, plPercent >= 0 ? "+" : "", plPercent));
+        profitLossLabel.setStyle("-fx-font-weight: bold; -fx-font-size: 13pt; -fx-text-fill: " + plColor + ";");
+    }
+    
+    /**
+     * Show portfolio pie chart in a new window
+     * Displays what percentage of total investment is in each stock
+     */
+    private void showPortfolioChart() {
+        if (stockService.getAllStocks().isEmpty()) {
+            showError("No stocks in portfolio to display!");
+            return;
+        }
+        
+        // Create new window (Stage)
+        Stage chartStage = new Stage();
+        chartStage.setTitle("Portfolio Investment Distribution");
+        chartStage.setWidth(600);
+        chartStage.setHeight(500);
+        
+        // Create PieChart
+        PieChart pieChart = new PieChart();
+        pieChart.setTitle("Investment by Stock");
+        pieChart.setLabelLineLength(10);
+        
+        // Calculate total investment
+        double totalInvestment = stockService.getTotalInvestment();
+        
+        // Add data for each stock
+        javafx.collections.ObservableList<Stock> stocks = stockService.getAllStocks();
+        for (Stock stock : stocks) {
+            double stockInvestment = stock.getShares() * stock.getPurchasePrice();
+            double percentage = (stockInvestment / totalInvestment) * 100.0;
+            
+            String label = String.format("%s (%s): $%,.0f (%.1f%%)", 
+                stock.getSymbol(), 
+                stock.getCompany(), 
+                stockInvestment, 
+                percentage);
+            
+            PieChart.Data slice = new PieChart.Data(label, stockInvestment);
+            pieChart.getData().add(slice);
+        }
+        
+        // Create close button
+        Button closeBtn = new Button("Close");
+        closeBtn.getStyleClass().add("mcgill-button");
+        closeBtn.setOnAction(e -> chartStage.close());
+        
+        // Layout
+        VBox chartContainer = new VBox(15);
+        chartContainer.setAlignment(Pos.CENTER);
+        chartContainer.setPadding(new Insets(20));
+        chartContainer.getChildren().addAll(pieChart, closeBtn);
+        
+        Scene chartScene = new Scene(chartContainer);
+        chartScene.getStylesheets().addAll(
+            getClass().getResource("/styles/theme.css").toExternalForm(),
+            getClass().getResource("/styles/common.css").toExternalForm()
+        );
+        
+        chartStage.setScene(chartScene);
+        chartStage.show();
+    }
+}
+
