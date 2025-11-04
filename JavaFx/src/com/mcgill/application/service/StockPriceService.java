@@ -1,5 +1,4 @@
 package com.mcgill.application.service;
-
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import java.net.URI;

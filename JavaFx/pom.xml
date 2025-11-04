@@ -50,6 +50,13 @@
             <artifactId>gson</artifactId>
             <version>2.10.1</version>
         </dependency>
+
+        <!-- kdb+ IPC Java client -->
+        <dependency>
+            <groupId>com.kx</groupId>
+            <artifactId>javakdb</artifactId>
+            <version>2.1</version>
+        </dependency>
     </dependencies>
 
     <build>

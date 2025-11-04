@@ -91,8 +91,14 @@ public class PortfolioController {
         refreshPricesBtn.setPrefHeight(35);
         refreshPricesBtn.setOnAction(e -> refreshStockPrices());
 
+        // Real-Time Analysis (premium) button
+        Button realTimeBtn = new Button("⚡ Real-Time Analysis");
+        realTimeBtn.getStyleClass().add("mcgill-button");
+        realTimeBtn.setPrefHeight(35);
+        realTimeBtn.setOnAction(e -> openRealTimeAnalysisWindow());
+
         // include in statsBox with date
-        statsBox.getChildren().addAll(totalInvestmentLabel, currentValueLabel, profitLossLabel, dateLabel, viewGraphBtn, refreshPricesBtn);
+        statsBox.getChildren().addAll(totalInvestmentLabel, currentValueLabel, profitLossLabel, dateLabel, viewGraphBtn, refreshPricesBtn, realTimeBtn);
         
         // Store labels as instance variables for updates
         this.totalInvestmentLabel = totalInvestmentLabel;
@@ -815,6 +821,66 @@ public class PortfolioController {
         
         chartStage.setScene(chartScene);
         chartStage.show();
+    }
+
+    private void openRealTimeAnalysisWindow() {
+        Stage rtStage = new Stage();
+        rtStage.setTitle("Real-Time Analysis");
+
+        // Table and data
+        javafx.collections.ObservableList<com.mcgill.application.model.LiveTick> data = javafx.collections.FXCollections.observableArrayList();
+        javafx.scene.control.TableView<com.mcgill.application.model.LiveTick> table = new javafx.scene.control.TableView<>(data);
+        table.setColumnResizePolicy(javafx.scene.control.TableView.CONSTRAINED_RESIZE_POLICY_FLEX_LAST_COLUMN);
+
+        javafx.scene.control.TableColumn<com.mcgill.application.model.LiveTick, String> symCol = new javafx.scene.control.TableColumn<>("Symbol");
+        symCol.setCellValueFactory(c -> c.getValue().symbolProperty());
+        javafx.scene.control.TableColumn<com.mcgill.application.model.LiveTick, String> timeCol = new javafx.scene.control.TableColumn<>("Time");
+        timeCol.setCellValueFactory(c -> c.getValue().timeProperty());
+        javafx.scene.control.TableColumn<com.mcgill.application.model.LiveTick, Number> pxCol = new javafx.scene.control.TableColumn<>("Price");
+        pxCol.setCellValueFactory(c -> c.getValue().priceProperty());
+        table.getColumns().addAll(symCol, timeCol, pxCol);
+
+        // Layout
+        VBox box = new VBox(12, table);
+        box.setAlignment(Pos.CENTER_LEFT);
+        box.setPadding(new Insets(16));
+        box.getStyleClass().add("card");
+
+        Scene scene = new Scene(box, 700, 420);
+        scene.getStylesheets().addAll(
+            getClass().getResource("/styles/theme.css").toExternalForm(),
+            getClass().getResource("/styles/common.css").toExternalForm(),
+            getClass().getResource("/styles/portfolio.css").toExternalForm()
+        );
+        rtStage.setScene(scene);
+        rtStage.show();
+
+        // Connect to kdb and poll quote table every second
+        com.mcgill.application.service.KdbClientService kdb = new com.mcgill.application.service.KdbClientService();
+        try {
+            kdb.connect("localhost", 5012);
+            java.util.concurrent.ScheduledExecutorService ses = java.util.concurrent.Executors.newSingleThreadScheduledExecutor();
+            ses.scheduleAtFixedRate(() -> {
+                try {
+                    Object obj = kdb.exec("select sym,px from quote");
+                    if (obj instanceof com.kx.c.Flip f) {
+                        String[] sym = (String[]) f.y[0];
+                        double[] px = (double[]) f.y[1];
+                        javafx.application.Platform.runLater(() -> {
+                            for (int i = 0; i < sym.length; i++) {
+                                com.mcgill.application.model.LiveTick lt = new com.mcgill.application.model.LiveTick();
+                                lt.setSymbol(sym[i]);
+                                lt.setPrice(px[i]);
+                                lt.setTime(java.time.ZonedDateTime.now(java.time.ZoneId.of("America/New_York"))
+                                    .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")));
+                                data.add(0, lt);
+                                if (data.size() > 1000) data.remove(data.size() - 1);
+                            }
+                        });
+                    }
+                } catch (Exception ignored2) {}
+            }, 0, 1, java.util.concurrent.TimeUnit.SECONDS);
+        } catch (Exception ignored) {}
     }
 }
 
