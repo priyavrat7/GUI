@@ -1,6 +1,8 @@
 package com.mcgill.application.service;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.mcgill.application.model.Stock;
+import javafx.collections.ObservableList;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -98,12 +100,12 @@ public class StockPriceService {
         return result;
     }
 
-    public int updateAllPrices(javafx.collections.ObservableList<com.mcgill.application.model.Stock> stocks) {
+    public int updateAllPrices(ObservableList<Stock> stocks) {
         if (stocks == null || stocks.isEmpty()) return 0;
         int updated = 0;
         // Build unique symbol list
         java.util.List<String> all = new java.util.ArrayList<>();
-        for (com.mcgill.application.model.Stock s : stocks) {
+        for (Stock s : stocks) {
             String sym = s.getSymbol();
             if (sym != null && !sym.isBlank()) all.add(sym.toUpperCase());
         }
@@ -115,7 +117,7 @@ public class StockPriceService {
             var sub = all.subList(i, Math.min(i + chunkSize, all.size()));
             var map = getBatchPrices(sub);
             if (!map.isEmpty()) {
-                for (com.mcgill.application.model.Stock s : stocks) {
+                for (Stock s : stocks) {
                     Double p = map.get(s.getSymbol().toUpperCase());
                     if (p != null && p > 0) {
                         s.setCurrentPrice(p);
